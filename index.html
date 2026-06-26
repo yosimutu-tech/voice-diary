@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4a3728">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="声の日記">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>声の日記</title>
+  <link rel="manifest" href="#" id="manifest-link">
+
+  <style>
+    :root {
+      --ink:    #2c1f14;
+      --paper:  #fdf6ec;
+      --ruled:  #e8ddd0;
+      --accent: #8b5e3c;
+      --accent2:#c4874a;
+      --muted:  #9a8070;
+      --danger: #b94040;
+      --surface:#fff9f2;
+      --shadow: 0 2px 12px rgba(44,31,20,0.10);
+      --radius: 14px;
+
+      --fs-date: 13px;
+      --fs-body: 18px;
+      --fs-title: 22px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Mincho ProN','Georgia',serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+    }
+
+    /* ===== ヘッダー ===== */
+    #header {
+      background: var(--accent);
+      color: white;
+      padding: 14px 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(44,31,20,0.2);
+    }
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .app-title span {
+      font-size: 11px;
+      opacity: 0.75;
+      margin-left: 6px;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+    #btn-new {
+      background: white;
+      color: var(--accent);
+      border: none;
+      border-radius: 20px;
+      padding: 7px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ===== タブ ===== */
+    #tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1.5px solid var(--ruled);
+      flex-shrink: 0;
+    }
+    .tab {
+      flex: 1;
+      padding: 11px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2.5px solid transparent;
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ===== ページ管理 ===== */
+    .page { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .page.active { display: flex; }
+
+    /* ===== 一覧ページ ===== */
+    #list-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .diary-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+      border-left: 3px solid var(--accent2);
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .diary-card:active { opacity: 0.8; transform: scale(0.99); }
+    .card-date {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 5px;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+    .card-preview {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--ink);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .card-delete {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+    #empty-list {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--muted);
+    }
+    #empty-list .icon { font-size: 60px; opacity: 0.35; margin-bottom: 14px; }
+    #empty-list p { font-size: 16px; line-height: 1.8; }
+
+    /* ===== 書くページ ===== */
+    #write-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 16px 16px 0;
+      gap: 10px;
+    }
+    #write-date {
+      font-size: 13px;
+      color: var(--muted);
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+      letter-spacing: 0.05em;
+    }
+
+    /* 原稿用紙風テキストエリア */
+    #diary-text {
+      flex: 1;
+      background: var(--surface);
+      border: 1.5px solid var(--ruled);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-family: 'Hiragino Mincho ProN','Georgia',serif;
+      font-size: var(--fs-body);
+      line-height: 2;
+      color: var(--ink);
+      resize: none;
+      outline: none;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+
+      /* 横罫線 */
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent calc(2em * 1.15 - 1px),
+        var(--ruled) calc(2em * 1.15 - 1px),
+        var(--ruled) calc(2em * 1.15)
+      );
+      background-attachment: local;
+    }
+    #diary-text::placeholder { color: var(--muted); opacity: 0.6; }
+
+    /* 中間バナー（認識中） */
+    #listening-bar {
+      display: none;
+      background: #fff3e0;
+      border: 1.5px solid var(--accent2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--accent);
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    #listening-bar.visible { display: flex; }
+    .mini-wave { display: flex; gap: 3px; align-items: center; }
+    .mini-bar {
+      width: 3px; background: var(--accent2); border-radius: 2px;
+      animation: wave 1.2s ease-in-out infinite;
+    }
+    .mini-bar:nth-child(1){height:8px;animation-delay:0s}
+    .mini-bar:nth-child(2){height:14px;animation-delay:0.15s}
+    .mini-bar:nth-child(3){height:10px;animation-delay:0.3s}
+    @keyframes wave { 0%,100%{transform:scaleY(0.4)} 50%{transform:scaleY(1)} }
+
+    /* 下部ボタン群 */
+    #write-controls {
+      padding: 12px 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .btn-row { display: flex; gap: 8px; }
+    .btn-mic {
+      flex: 1;
+      height: 54px;
+      border-radius: var(--radius);
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+      transition: all 0.2s;
+    }
+    .btn-mic.start { background: var(--accent); color: white; }
+    .btn-mic.stop  { background: var(--danger); color: white; animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0%,100%{box-shadow:0 0 0 0 rgba(185,64,64,0.3)}
+      50%{box-shadow:0 0 0 8px rgba(185,64,64,0)}
+    }
+    .btn-save {
+      flex: 1;
+      height: 54px;
+      border-radius: var(--radius);
+      border: 2px solid var(--accent);
+      background: white;
+      color: var(--accent);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+    .btn-clear-text {
+      width: 100%;
+      height: 40px;
+      border-radius: 10px;
+      border: 1.5px solid var(--ruled);
+      background: white;
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+
+    /* ===== 詳細ページ ===== */
+    #detail-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+    #detail-date {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+    #detail-text {
+      font-size: 18px;
+      line-height: 2;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    #detail-controls {
+      padding: 12px 16px 20px;
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .btn-back {
+      flex: 1;
+      height: 50px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--ruled);
+      background: white;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+    .btn-delete {
+      height: 50px;
+      padding: 0 20px;
+      border-radius: var(--radius);
+      border: none;
+      background: var(--danger);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+
+    /* ===== トースト ===== */
+    #toast {
+      position: fixed;
+      bottom: 100px;
+      left: 16px;
+      right: 16px;
+      background: var(--accent);
+      color: white;
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-size: 15px;
+      font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+      z-index: 300;
+      display: none;
+      text-align: center;
+    }
+    #toast.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <div id="header">
+    <div class="app-title">声の日記 <span>voice diary</span></div>
+    <button id="btn-new">＋ 新しく書く</button>
+  </div>
+
+  <!-- タブ -->
+  <div id="tabs">
+    <div class="tab active" data-tab="list">📖 日記一覧</div>
+    <div class="tab" data-tab="write">🎤 声で書く</div>
+  </div>
+
+  <!-- ===== 一覧ページ ===== -->
+  <div class="page active" id="page-list">
+    <div id="list-area">
+      <div id="empty-list">
+        <div class="icon">📔</div>
+        <p>まだ日記がありません。<br>「声で書く」から始めましょう。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 書くページ ===== -->
+  <div class="page" id="page-write">
+    <div id="write-area">
+      <div id="write-date"></div>
+      <div id="listening-bar">
+        <div class="mini-wave">
+          <div class="mini-bar"></div>
+          <div class="mini-bar"></div>
+          <div class="mini-bar"></div>
+        </div>
+        <span>聞き取り中… 話してください</span>
+      </div>
+      <textarea id="diary-text" placeholder="ここに日記が書かれます。マイクボタンを押して話してください。手で直接入力することもできます。"></textarea>
+    </div>
+    <div id="write-controls">
+      <div class="btn-row">
+        <button class="btn-mic start" id="btn-mic">🎤 話して入力</button>
+        <button class="btn-save" id="btn-save">💾 保存</button>
+      </div>
+      <button class="btn-clear-text" id="btn-clear-text">🗑️ 入力内容を消去</button>
+    </div>
+  </div>
+
+  <!-- ===== 詳細ページ ===== -->
+  <div class="page" id="page-detail">
+    <div id="detail-area">
+      <div id="detail-date"></div>
+      <div id="detail-text"></div>
+    </div>
+    <div id="detail-controls">
+      <button class="btn-back" id="btn-back">← 一覧へ戻る</button>
+      <button class="btn-delete" id="btn-delete-detail">削除</button>
+    </div>
+  </div>
+
+  <!-- トースト -->
+  <div id="toast"></div>
+
+<script>
+// ===========================
+// データ管理（localStorage）
+// ===========================
+const STORAGE_KEY = 'voice_diary_entries';
+
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
+function saveEntries(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+// ===========================
+// 日付フォーマット
+// ===========================
+function formatDate(iso) {
+  const d = new Date(iso);
+  const week = ['日','月','火','水','木','金','土'];
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${week[d.getDay()]}）${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+function todayStr() { return formatDate(new Date().toISOString()); }
+
+// ===========================
+// タブ切替
+// ===========================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelector(`[data-tab="${name}"]`)?.classList.add('active');
+}
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const t = tab.dataset.tab;
+    if (t === 'write') initWritePage();
+    showPage(t);
+  });
+});
+
+// ===========================
+// 一覧ページ
+// ===========================
+function renderList() {
+  const entries = loadEntries();
+  const area = document.getElementById('list-area');
+  const empty = document.getElementById('empty-list');
+
+  // 既存カードを削除
+  area.querySelectorAll('.diary-card').forEach(c => c.remove());
+
+  if (entries.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // 新しい順
+  [...entries].reverse().forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'diary-card';
+    card.innerHTML = `
+      <div class="card-date">${formatDate(entry.date)}</div>
+      <div class="card-preview">${escHtml(entry.text)}</div>
+      <button class="card-delete" data-id="${entry.id}">✕</button>
+    `;
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('card-delete')) return;
+      showDetail(entry.id);
+    });
+    card.querySelector('.card-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteEntry(entry.id);
+    });
+    area.appendChild(card);
+  });
+}
+
+function deleteEntry(id) {
+  if (!confirm('この日記を削除しますか？')) return;
+  const entries = loadEntries().filter(e => e.id !== id);
+  saveEntries(entries);
+  renderList();
+  showToast('削除しました');
+}
+
+// ===========================
+// 詳細ページ
+// ===========================
+function showDetail(id) {
+  const entry = loadEntries().find(e => e.id === id);
+  if (!entry) return;
+  document.getElementById('detail-date').textContent = formatDate(entry.date);
+  document.getElementById('detail-text').textContent = entry.text;
+  document.getElementById('btn-delete-detail').onclick = () => {
+    deleteEntry(id);
+    showPage('list');
+  };
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-detail').classList.add('active');
+}
+document.getElementById('btn-back').addEventListener('click', () => {
+  renderList();
+  showPage('list');
+});
+
+// ===========================
+// 書くページ
+// ===========================
+function initWritePage() {
+  document.getElementById('write-date').textContent = todayStr();
+  document.getElementById('diary-text').value = '';
+  stopListening();
+}
+
+document.getElementById('btn-new').addEventListener('click', () => {
+  initWritePage();
+  showPage('write');
+  // タブのactiveも
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'write'));
+});
+
+document.getElementById('btn-clear-text').addEventListener('click', () => {
+  if (!document.getElementById('diary-text').value) return;
+  if (confirm('入力内容を消去しますか？')) {
+    document.getElementById('diary-text').value = '';
+    stopListening();
+  }
+});
+
+document.getElementById('btn-save').addEventListener('click', () => {
+  const text = document.getElementById('diary-text').value.trim();
+  if (!text) { showToast('内容を入力してください'); return; }
+  stopListening();
+  const entries = loadEntries();
+  entries.push({ id: Date.now().toString(), date: new Date().toISOString(), text });
+  saveEntries(entries);
+  showToast('💾 保存しました！');
+  setTimeout(() => {
+    renderList();
+    showPage('list');
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'list'));
+  }, 800);
+});
+
+// ===========================
+// 音声認識
+// ===========================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isListening = false;
+let baseText = '';
+
+function setupRecognition() {
+  if (!SpeechRecognition) return;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ja-JP';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('btn-mic').className = 'btn-mic stop';
+    document.getElementById('btn-mic').innerHTML = '⏹ 止める';
+    document.getElementById('listening-bar').classList.add('visible');
+  };
+
+  recognition.onend = () => {
+    if (isListening) {
+      try { recognition.start(); } catch(e) {}
+    } else {
+      onStopListening();
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    showToast('マイクエラー: ' + e.error);
+    isListening = false;
+    onStopListening();
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    let finalAdd = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalAdd += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if (finalAdd) baseText += finalAdd;
+    document.getElementById('diary-text').value = baseText + interim;
+  };
+}
+
+function startListening() {
+  if (!SpeechRecognition) { showToast('このブラウザは音声認識に対応していません'); return; }
+  if (!recognition) setupRecognition();
+  baseText = document.getElementById('diary-text').value;
+  isListening = true;
+  try { recognition.start(); } catch(e) { showToast('マイクを起動できませんでした'); }
+}
+
+function stopListening() {
+  isListening = false;
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+  onStopListening();
+}
+
+function onStopListening() {
+  document.getElementById('btn-mic').className = 'btn-mic start';
+  document.getElementById('btn-mic').innerHTML = '🎤 話して入力';
+  document.getElementById('listening-bar').classList.remove('visible');
+}
+
+document.getElementById('btn-mic').addEventListener('click', () => {
+  if (isListening) stopListening();
+  else startListening();
+});
+
+// ===========================
+// ユーティリティ
+// ===========================
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('visible'), 2500);
+}
+
+// ===========================
+// PWA マニフェスト
+// ===========================
+const manifest = {
+  name: '声の日記', short_name: '声の日記',
+  description: '音声入力で書く日記アプリ',
+  start_url: '.', display: 'standalone',
+  background_color: '#fdf6ec', theme_color: '#4a3728', orientation: 'portrait-primary',
+  icons: [{ src: 'data:image/svg+xml,' + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+      <rect width="192" height="192" rx="40" fill="#8b5e3c"/>
+      <text x="96" y="130" font-size="100" text-anchor="middle">📔</text>
+    </svg>`), sizes: '192x192', type: 'image/svg+xml' }]
+};
+const mBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+document.getElementById('manifest-link').href = URL.createObjectURL(mBlob);
+
+// ===========================
+// 初期化
+// ===========================
+document.getElementById('write-date').textContent = todayStr();
+renderList();
+</script>
+</body>
+</html>
